@@ -1,0 +1,17 @@
+[package]
+name = "piperize"
+version = "0.1.0"
+edition = "2024"
+readme = "README.md"
+license-file = "LICENSE"
+description = "A rust crate to easily create a new trait function inspired by elixir's piping function declaration"
+repository = "https://github.com/AfkaraLP/piperize"
+documentation = "https://docs.rs/piperize"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.106"
+quote = "1.0.44"
+syn = { version = "2.0.114", features = ["full"] }

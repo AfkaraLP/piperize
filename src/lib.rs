@@ -32,26 +32,44 @@
 //!     assert_eq!(foo, 42);
 //! }
 //! ```
+//!
+//! ## Using multiple arguments:
+//!
+//! ```rust
+//! #[piperize::piperize]
+//! fn my_add(a: i32, b: i32) -> i32 {
+//!     a + b
+//! }
+//!
+//! fn main() {
+//!     let foo = 21.my_add(21);
+//!     assert_eq!(foo, 42);
+//! }
+//! ```
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 use syn::{FnArg, ItemFn, PatType, parse_macro_input, punctuated::Punctuated, token::Comma};
 
-fn get_arg(inputs: &Punctuated<FnArg, Comma>) -> &PatType {
+fn args_to_split(inputs: &Punctuated<FnArg, Comma>) -> (&PatType, Vec<&FnArg>) {
     assert!(
         !inputs.is_empty(),
-        "Traitify function cannot take no arguments"
+        "Piperize function cannot take no arguments"
     );
     assert!(
-        inputs.len() == 1,
-        "Traitify function can only take one argument"
+        !inputs.iter().any(|i| match i {
+            FnArg::Receiver(_) => true,
+            FnArg::Typed(_) => false,
+        }),
+        "Function arguments cannot be \"self\""
     );
-    match inputs.first() {
-        Some(FnArg::Typed(pat_type)) => pat_type,
-        _ => panic!(
+    let Some(FnArg::Typed(first_arg)) = inputs.first() else {
+        panic!(
             "Invalid function arguments\n example of a valid function signature: fn foo(a: i32) -> i32"
-        ),
-    }
+        )
+    };
+    let rest_args = inputs.iter().skip(1).collect();
+    (first_arg, rest_args)
 }
 
 #[proc_macro_attribute]
@@ -65,9 +83,15 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
 
     let camel_case_fn_name = camel_case(fn_name);
 
-    let arg = get_arg(&input_fn.sig.inputs);
-    let arg_name = &arg.pat;
-    let arg_type = &arg.ty;
+    let arg_split = args_to_split(&input_fn.sig.inputs);
+    let first_arg = arg_split.0;
+    let first_arg_name = &first_arg.pat;
+    let first_arg_type = &first_arg.ty;
+    let rest_args = arg_split.1;
+    let mut rest = Punctuated::<&FnArg, Comma>::new();
+    for rest_arg in rest_args {
+        rest.push(rest_arg);
+    }
 
     let generics = &input_fn.sig.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -76,12 +100,12 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
         #input_fn
 
         #visibility trait #camel_case_fn_name #generics #where_clause {
-            fn #fn_name(self) #output;
+            fn #fn_name(self, #rest) #output;
         }
 
-        impl #impl_generics #camel_case_fn_name #ty_generics for #arg_type #where_clause {
-            fn #fn_name(self) #output {
-                let #arg_name = self;
+        impl #impl_generics #camel_case_fn_name #ty_generics for #first_arg_type #where_clause {
+            fn #fn_name(self, #rest) #output {
+                let #first_arg_name = self;
                 #body
             }
         }

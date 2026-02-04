@@ -16,3 +16,17 @@ fn main() {
   assert_eq!(42, (67, -25).add_tuple_vals());
 }
 ```
+## Using multiple arguments:
+
+```rust
+use piperize::piperize;
+
+#[piperize]
+fn my_add(a: i32, b: i32) -> i32 {
+    a + b
+}
+fn main() {
+    let foo = 21.my_add(21);
+    assert_eq!(foo, 42);
+}
+```

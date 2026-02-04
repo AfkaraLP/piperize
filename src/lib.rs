@@ -87,6 +87,12 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let first_arg = arg_split.0;
     let first_arg_name = &first_arg.pat;
     let first_arg_type = &first_arg.ty;
+    match first_arg_type.as_ref() {
+        syn::Type::ImplTrait(_) => todo!(
+            "Cannot have impl Trait as first argument's type yet\n instead use a generic type parameter to constrain your function signature:\n---\n fn foo(a: impl SomeTrait) ==> fn foo<T: SomeTrait>(a: T)\n---"
+        ),
+        _ => {}
+    }
     let rest_args = arg_split.1;
     let mut rest = Punctuated::<&FnArg, Comma>::new();
     for rest_arg in rest_args {

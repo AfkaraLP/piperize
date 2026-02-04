@@ -61,6 +61,7 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let output = &input_fn.sig.output;
     let body = &input_fn.block;
+    let visibility = &input_fn.vis;
 
     let camel_case_fn_name = camel_case(fn_name);
 
@@ -72,7 +73,9 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let expanded = quote! {
-        pub trait #camel_case_fn_name #generics #where_clause {
+        #input_fn
+
+        #visibility trait #camel_case_fn_name #generics #where_clause {
             fn #fn_name(self) #output;
         }
 

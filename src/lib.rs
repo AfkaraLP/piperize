@@ -87,11 +87,10 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let first_arg = arg_split.0;
     let first_arg_name = &first_arg.pat;
     let first_arg_type = &first_arg.ty;
-    match first_arg_type.as_ref() {
-        syn::Type::ImplTrait(_) => todo!(
+    if let syn::Type::ImplTrait(_) = first_arg_type.as_ref() {
+        todo!(
             "Cannot have impl Trait as first argument's type yet\n instead use a generic type parameter to constrain your function signature:\n---\n fn foo(a: impl SomeTrait) ==> fn foo<T: SomeTrait>(a: T)\n---"
-        ),
-        _ => {}
+        )
     }
     let rest_args = arg_split.1;
     let mut rest = Punctuated::<&FnArg, Comma>::new();
@@ -102,14 +101,19 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let generics = &input_fn.sig.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let trait_name: syn::Ident = syn::Ident::new(
+        &format!("{camel_case_fn_name}__PiperizeTrait"),
+        Span::mixed_site(),
+    );
+
     let expanded = quote! {
         #input_fn
 
-        #visibility trait #camel_case_fn_name #generics #where_clause {
+        #visibility trait #trait_name #generics #where_clause {
             fn #fn_name(self, #rest) #output;
         }
 
-        impl #impl_generics #camel_case_fn_name #ty_generics for #first_arg_type #where_clause {
+        impl #impl_generics #trait_name #ty_generics for #first_arg_type #where_clause {
             fn #fn_name(self, #rest) #output {
                 let #first_arg_name = self;
                 #body

@@ -101,6 +101,8 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let generics = &input_fn.sig.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let asyncness = input_fn.sig.asyncness;
+
     let trait_name: syn::Ident = syn::Ident::new(
         &format!("{camel_case_fn_name}__PiperizeTrait"),
         Span::mixed_site(),
@@ -110,11 +112,11 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
         #input_fn
 
         #visibility trait #trait_name #generics #where_clause {
-            fn #fn_name(self, #rest) #output;
+            #asyncness fn #fn_name(self, #rest) #output;
         }
 
         impl #impl_generics #trait_name #ty_generics for #first_arg_type #where_clause {
-            fn #fn_name(self, #rest) #output {
+            #asyncness fn #fn_name(self, #rest) #output {
                 let #first_arg_name = self;
                 #body
             }

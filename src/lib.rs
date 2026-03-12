@@ -81,7 +81,7 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     let body = &input_fn.block;
     let visibility = &input_fn.vis;
 
-    let camel_case_fn_name = camel_case(fn_name);
+    let trait_name = to_piperize_trait_name(fn_name);
 
     let arg_split = args_to_split(&input_fn.sig.inputs);
     let first_arg = arg_split.0;
@@ -103,11 +103,6 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
 
     let asyncness = input_fn.sig.asyncness;
 
-    let trait_name: syn::Ident = syn::Ident::new(
-        &format!("{camel_case_fn_name}__PiperizeTrait"),
-        Span::mixed_site(),
-    );
-
     let expanded = quote! {
         #input_fn
 
@@ -126,9 +121,10 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-fn camel_case(name: &syn::Ident) -> syn::Ident {
+fn to_piperize_trait_name(name: &syn::Ident) -> syn::Ident {
     let mut name_str = name.to_string();
     to_camel_case(&mut name_str);
+    name_str.push_str("__PiperizeTrait");
     syn::Ident::new(&name_str, Span::mixed_site())
 }
 

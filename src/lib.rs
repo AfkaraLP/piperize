@@ -109,6 +109,12 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
 
     let asyncness = input_fn.sig.asyncness;
 
+    let call = if asyncness.is_some() {
+        quote! { #fn_name(self, #rest_inputs).await}
+    } else {
+        quote! { #fn_name(self, #rest_inputs)}
+    };
+
     let expanded = quote! {
         #input_fn
 
@@ -120,7 +126,8 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
             #asyncness fn #fn_name(self, #rest) #output {
                 // let #first_arg_name = self;
                 // #body
-                #fn_name(self, #rest_inputs)
+                // #fn_name(self, #rest_inputs)
+                #call
             }
         }
     };

@@ -49,7 +49,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{FnArg, ItemFn, PatType, parse_macro_input, punctuated::Punctuated, token::Comma};
+use syn::{FnArg, ItemFn, Pat, PatType, parse_macro_input, punctuated::Punctuated, token::Comma};
 
 fn args_to_split(inputs: &Punctuated<FnArg, Comma>) -> (&PatType, Vec<&FnArg>) {
     assert!(
@@ -78,14 +78,13 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
 
     let fn_name = &input_fn.sig.ident;
     let output = &input_fn.sig.output;
-    let body = &input_fn.block;
+    // let body = &input_fn.block;
     let visibility = &input_fn.vis;
 
     let trait_name = to_piperize_trait_name(fn_name);
 
     let arg_split = args_to_split(&input_fn.sig.inputs);
     let first_arg = arg_split.0;
-    let first_arg_name = &first_arg.pat;
     let first_arg_type = &first_arg.ty;
     if let syn::Type::ImplTrait(_) = first_arg_type.as_ref() {
         todo!(
@@ -94,8 +93,15 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
     }
     let rest_args = arg_split.1;
     let mut rest = Punctuated::<&FnArg, Comma>::new();
+    let mut rest_inputs = Punctuated::<&Pat, Comma>::new();
     for rest_arg in rest_args {
         rest.push(rest_arg);
+        match rest_arg {
+            FnArg::Receiver(_) => unreachable!("shouldn't pass self as second arg"),
+            FnArg::Typed(pat_type) => {
+                rest_inputs.push(&pat_type.pat);
+            }
+        }
     }
 
     let generics = &input_fn.sig.generics;
@@ -112,8 +118,9 @@ pub fn piperize(_: TokenStream, item: TokenStream) -> TokenStream {
 
         impl #impl_generics #trait_name #ty_generics for #first_arg_type #where_clause {
             #asyncness fn #fn_name(self, #rest) #output {
-                let #first_arg_name = self;
-                #body
+                // let #first_arg_name = self;
+                // #body
+                #fn_name(self, #rest_inputs)
             }
         }
     };
